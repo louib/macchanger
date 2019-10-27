@@ -1,0 +1,3 @@
+# github-linguist language hints
+*.h linguist-language=C
+*.cpp linguist-language=C
