@@ -42,6 +42,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+// Required to query the interfaces with if_nameindex()
+#include <net/if.h>
+
 #include "mac.h"
 #include "maclist.h"
 #include "netinfo.h"
@@ -119,8 +122,10 @@ activate (GtkApplication* app,
           gpointer        user_data)
 {
   GtkWidget* window;
+  GtkComboBoxText* combo;
   GtkBuilder* builder;
   GError* error = NULL;
+
 
   /* Construct a GtkBuilder instance and load our UI description */
   builder = gtk_builder_new ();
@@ -130,9 +135,27 @@ activate (GtkApplication* app,
     return;
   }
 
-  /* Connect signal handlers to the constructed widgets. */
   window = (GtkWidget*) gtk_builder_get_object (builder, "main_window");
   g_signal_connect (window, "destroy", G_CALLBACK (gtk_main_quit), NULL);
+
+  combo = (GtkComboBoxText*) gtk_builder_get_object (builder, "interface_combo_box");
+
+  struct if_nameindex *if_nidxs, *intf;
+
+  if_nidxs = if_nameindex();
+  if (if_nidxs == NULL) {
+     perror("could not get network interface names.");
+     exit(EXIT_FAILURE);
+  }
+
+  for (intf = if_nidxs; intf->if_index != 0 || intf->if_name != NULL; intf++) {
+    gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(combo), NULL, intf->if_name);
+
+    // TODO set to active if it's a wireless interface.
+    gtk_combo_box_set_active(GTK_COMBO_BOX(combo), 1);
+  }
+
+  if_freenameindex(if_nidxs);
 
   // window = gtk_application_window_new (app);
   gtk_window_set_title (GTK_WINDOW (window), "macchanger");
