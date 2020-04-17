@@ -14,5 +14,5 @@ maclist.h maclist.c \
 netinfo.h netinfo.c \
 gtk-main.c
 
-macchangergtk_CPPFLAGS = @GTK_CFLAGS@ -DLISTDIR="\"$(datadir)/$(PACKAGE)\""
-macchangergtk_LDADD = @GTK_LIBS@
+macchangergtk_CPPFLAGS = @GTK_CFLAGS@ @LIBHANDY_CFLAGS@ -DLISTDIR="\"$(datadir)/$(PACKAGE)\""
+macchangergtk_LDADD = @GTK_LIBS@ @LIBHANDY_LIBS@
