@@ -24,8 +24,8 @@
  */
 
 #include <gtk/gtk.h>
-#define HANDY_USE_UNSTABLE_API
-#include <handy.h>
+// #define HANDY_USE_UNSTABLE_API
+// #include <handy.h>
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>

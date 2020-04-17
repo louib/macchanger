@@ -1,5 +1,4 @@
 AM_CPPFLAGS = -DLISTDIR="\"$(datadir)/$(PACKAGE)\""
-AM_LDFLAGS = -lgtk+-3.0
 
 bin_PROGRAMS = macchanger macchangergtk
 
