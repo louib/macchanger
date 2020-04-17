@@ -119,8 +119,22 @@ activate (GtkApplication* app,
           gpointer        user_data)
 {
   GtkWidget* window;
+  GtkBuilder* builder;
+  GError* error = NULL;
 
-  window = gtk_application_window_new (app);
+  /* Construct a GtkBuilder instance and load our UI description */
+  builder = gtk_builder_new ();
+  if (gtk_builder_add_from_file (builder, "src/main-window.ui", &error) == 0) {
+    g_printerr ("Error loading file: %s\n", error->message);
+    g_clear_error (&error);
+    return;
+  }
+
+  /* Connect signal handlers to the constructed widgets. */
+  window = (GtkWidget*) gtk_builder_get_object (builder, "main_window");
+  g_signal_connect (window, "destroy", G_CALLBACK (gtk_main_quit), NULL);
+
+  // window = gtk_application_window_new (app);
   gtk_window_set_title (GTK_WINDOW (window), "macchanger");
   gtk_window_set_default_size (GTK_WINDOW (window), 200, 200);
   gtk_widget_show_all (window);
@@ -128,7 +142,7 @@ activate (GtkApplication* app,
 
 int
 main (int    argc,
-      char **argv)
+      char** argv)
 {
   GtkApplication* app;
   int status;
@@ -138,5 +152,6 @@ main (int    argc,
   status = g_application_run (G_APPLICATION (app), argc, argv);
   g_object_unref (app);
 
+  gtk_main ();
   return status;
 }
