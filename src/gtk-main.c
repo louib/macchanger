@@ -24,6 +24,8 @@
  */
 
 #include <gtk/gtk.h>
+// This is required to acknowledge that we are using an unstable
+// version of the handy library.
 #define HANDY_USE_UNSTABLE_API
 #include <handy.h>
 
