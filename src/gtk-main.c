@@ -23,6 +23,10 @@
  * USA
  */
 
+#include <gtk/gtk.h>
+#define HANDY_USE_UNSTABLE_API
+#include <handy.h>
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -108,180 +112,29 @@ random_seed (void)
 	srandom(seed);
 }
 
+static void
+activate (GtkApplication* app,
+          gpointer        user_data)
+{
+  GtkWidget *window;
+
+  window = gtk_application_window_new (app);
+  gtk_window_set_title (GTK_WINDOW (window), "Window");
+  gtk_window_set_default_size (GTK_WINDOW (window), 200, 200);
+  gtk_widget_show_all (window);
+}
 
 int
-main (int argc, char *argv[])
+main (int    argc,
+      char **argv)
 {
-	char random       = 0;
-	char ending       = 0;
-	char another_any  = 0;
-	char another_same = 0;
-	char permanent    = 0;
-	char print_list   = 0;
-	char show         = 0;
-	char set_bia      = 0;
-	char *set_mac     = NULL;
-	char *search_word = NULL;
+  GtkApplication *app;
+  int status;
 
-	struct option long_options[] = {
-		/* Options without arguments */
-		{"help",        no_argument,       NULL, 'h'},
-		{"version",     no_argument,       NULL, 'V'},
-		{"random",      no_argument,       NULL, 'r'},
-		{"ending",      no_argument,       NULL, 'e'},
-		{"endding",     no_argument,       NULL, 'e'}, /* kept for backwards compatibility */
-		{"another",     no_argument,       NULL, 'a'},
-		{"permanent",   no_argument,       NULL, 'p'},
-		{"show",        no_argument,       NULL, 's'},
-		{"another_any", no_argument,       NULL, 'A'},
-		{"bia",         no_argument,       NULL, 'b'},
-		{"list",        optional_argument, NULL, 'l'},
-		{"mac",         required_argument, NULL, 'm'},
-		{NULL, 0, NULL, 0}
-	};
+  app = gtk_application_new ("org.gtk.example", G_APPLICATION_FLAGS_NONE);
+  g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
+  status = g_application_run (G_APPLICATION (app), argc, argv);
+  g_object_unref (app);
 
-	net_info_t *net;
-	mac_t      *mac;
-	mac_t      *mac_permanent;
-	mac_t      *mac_faked;
-	char       *device_name;
-	int         val;
-	int         ret;
-
-	/* Read the parameters */
-	while ((val = getopt_long (argc, argv, "VasAbrephlm:", long_options, NULL)) != -1) {
-		switch (val) {
-		case 'V':
-			printf ("GNU MAC changer %s\n"
-				"Written by Alvaro Lopez Ortega <alvaro@gnu.org>\n\n"
-				"Copyright (C) 2003,2013 Alvaro Lopez Ortega <alvaro@gnu.org>.\n"
-				"This is free software; see the source for copying conditions.  There is NO\n"
-				"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n",
-				VERSION);
-			exit (EXIT_OK);
-			break;
-		case 'l':
-			print_list = 1;
-			search_word = optarg;
-			break;
-		case 'r':
-			random = 1;
-			break;
-		case 'e':
-			ending = 1;
-			break;
-		case 'b':
-			set_bia = 1;
-			break;
-		case 'a':
-			another_same = 1;
-			break;
-		case 's':
-			show = 1;
-			break;
-		case 'A':
-			another_any = 1;
-			break;
-		case 'p':
-			permanent = 1;
-			break;
-		case 'm':
-			set_mac = optarg;
-			break;
-		case 'h':
-		case '?':
-		default:
-			print_help();
-			exit (EXIT_OK);
-			break;
-		}
-	}
-
-	/* Read the MAC lists */
-	if (mc_maclist_init() < 0) {
-		exit (EXIT_ERROR);
-	}
-
-	/* Print list? */
-	if (print_list) {
-		mc_maclist_print(search_word);
-		exit (EXIT_OK);
-	}
-
-	/* Get device name argument */
-	if (optind >= argc) {
-		print_usage();
-		exit (EXIT_OK);
-	}
-	device_name = argv[optind];
-
-	/* Seed a random number generator */
-	random_seed();
-
-	/* Read the MAC */
-	if ((net = mc_net_info_new(device_name)) == NULL) {
-		exit (EXIT_ERROR);
-	}
-	mac = mc_net_info_get_mac(net);
-	mac_permanent = mc_net_info_get_permanent_mac(net);
-
-	/* --bia can only be used with --random */
-	if (set_bia  &&  !random) {
-		fprintf (stderr, "[WARNING] Ignoring --bia option that can only be used with --random\n");
-	}
-
-	/* Print the current MAC info */
-	print_mac ("Current MAC:   ", mac);
-	print_mac ("Permanent MAC: ", mac_permanent);
-
-	/* Change the MAC */
-	mac_faked = mc_mac_dup (mac);
-
-	if (show) {
-		exit (EXIT_OK);
-	} else if (set_mac) {
-		if (mc_mac_read_string (mac_faked, set_mac) < 0) {
-			exit (EXIT_ERROR);
-		}
-	} else if (random) {
-		mc_mac_random (mac_faked, 6, set_bia);
-	} else if (ending) {
-		mc_mac_random (mac_faked, 3, 1);
-	} else if (another_same) {
-		val = mc_maclist_is_wireless (mac);
-		mc_maclist_set_random_vendor (mac_faked, val);
-		mc_mac_random (mac_faked, 3, 1);
-	} else if (another_any) {
-		mc_maclist_set_random_vendor(mac_faked, mac_is_anykind);
-		mc_mac_random (mac_faked, 3, 1);
-	} else if (permanent) {
-		mac_faked = mc_mac_dup (mac_permanent);
-	} else {
-		exit (EXIT_OK); /* default to show */
-	}
-
-	/* Set the new MAC */
-	ret = mc_net_info_set_mac (net, mac_faked);
-	if (ret == 0) {
-		/* Re-read the MAC */
-		mc_mac_free (mac_faked);
-		mac_faked = mc_net_info_get_mac(net);
-
-		/* Print it */
-		print_mac ("New MAC:       ", mac_faked);
-
-		/* Is the same MAC? */
-		if (mc_mac_equal (mac, mac_faked)) {
-			printf ("It's the same MAC!!\n");
-		}
-	}
-
-	/* Memory free */
-	mc_mac_free (mac);
-	mc_mac_free (mac_faked);
-	mc_mac_free (mac_permanent);
-	mc_net_info_free (net);
-	mc_maclist_free();
-
-	return (ret == 0) ? EXIT_OK : EXIT_ERROR;
+  return status;
 }
