@@ -95,32 +95,11 @@ print_mac (const char *s, const mac_t *mac)
 		CARD_NAME(mac));
 }
 
-
-static void
-random_seed (void)
-{
-	int            fd;
-	struct timeval tv;
-	unsigned int   seed;
-
-	if ((fd = open("/dev/hwrng", O_RDONLY)) >= 0 ||
-	    (fd = open("/dev/random", O_RDONLY)) >= 0 ||
-	    (fd = open("/dev/urandom", O_RDONLY)) >= 0)
-	{
-		read (fd, &seed, sizeof(seed));
-		close (fd);
-	} else {
-		gettimeofday (&tv, NULL);
-		seed = (getpid() << 16) ^ tv.tv_sec ^ tv.tv_usec;
-	}
-
-	srandom(seed);
+static void interface_changed(GtkWidget* widget, gpointer data) {
+  printf("interface changed\n");
 }
 
-static void
-activate (GtkApplication* app,
-          gpointer        user_data)
-{
+static void activate(GtkApplication* app, gpointer user_data) {
   GtkWidget* window;
   GtkComboBoxText* combo;
   GtkBuilder* builder;
@@ -142,20 +121,21 @@ activate (GtkApplication* app,
 
   struct if_nameindex *if_nidxs, *intf;
 
+  // Populating the interface names.
   if_nidxs = if_nameindex();
   if (if_nidxs == NULL) {
      perror("could not get network interface names.");
      exit(EXIT_FAILURE);
   }
-
   for (intf = if_nidxs; intf->if_index != 0 || intf->if_name != NULL; intf++) {
     gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(combo), NULL, intf->if_name);
 
     // TODO set to active if it's a wireless interface.
     gtk_combo_box_set_active(GTK_COMBO_BOX(combo), 1);
   }
-
   if_freenameindex(if_nidxs);
+
+  g_signal_connect (combo, "changed", G_CALLBACK (interface_changed), NULL);
 
   // window = gtk_application_window_new (app);
   gtk_window_set_title (GTK_WINDOW (window), "macchanger");
@@ -163,10 +143,7 @@ activate (GtkApplication* app,
   gtk_widget_show_all (window);
 }
 
-int
-main (int    argc,
-      char** argv)
-{
+int main (int argc, char** argv) {
   GtkApplication* app;
   int status;
 
